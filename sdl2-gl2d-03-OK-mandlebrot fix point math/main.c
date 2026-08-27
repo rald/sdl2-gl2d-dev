@@ -1,15 +1,15 @@
 #include "gl2d.h"
 #include <stdint.h>
 
-#define WIDTH 128
-#define HEIGHT 128
-#define SCALE 4
+#define WIDTH 320
+#define HEIGHT 240
 #define MAX_ITER 64
 
 // 16.16 Fixed-point representation (16 bits integer, 16 bits fractional)
 typedef int32_t fix;
 
 #define TO_FIX(x) ((fix)((x) * 65536.0))
+#define TO_FLT(x) ((double)(x) / 65536.0)
 #define MUL_FIX(x, y) (fix)(((int64_t)(x) * (y)) >> 16)
 
 uint32_t mandel_color(int i) {
@@ -24,8 +24,7 @@ uint32_t mandel_color(int i) {
 }
 
 int main(int argc, char* argv[]) {
-    // Initialize 128x128 virtual screen scaled up 4x
-    GL2D_Context* app = gl2d_init("gl2d - Fractint DOS Style (128x128x4)", WIDTH, HEIGHT, SCALE);
+    GL2D_Context* app = gl2d_init("gl2d - Fractint DOS Style (Integer Math)", WIDTH, HEIGHT, 3);
     if (!app) return -1;
 
     int running = 1;
@@ -55,7 +54,7 @@ int main(int argc, char* argv[]) {
         fix dx = scale / WIDTH;
         fix dy = scale / HEIGHT;
 
-        // Render loop using pure 32-bit integer operations
+        // Render loop using pure 32-bit integer operations (No FPU required!)
         for (int py = 0; py < HEIGHT; py++) {
             fix y0 = y_min + py * dy;
             for (int px = 0; px < WIDTH; px++) {
@@ -65,6 +64,7 @@ int main(int argc, char* argv[]) {
                 fix y = 0;
                 int iteration = 0;
 
+                // Inner fractal loop: z = z^2 + c evaluated entirely with integer shifts & multiplies
                 while (iteration < MAX_ITER) {
                     fix x2 = MUL_FIX(x, x);
                     fix y2 = MUL_FIX(y, y);

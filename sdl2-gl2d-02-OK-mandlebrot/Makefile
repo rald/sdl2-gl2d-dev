@@ -1,9 +1,13 @@
+# Compiler and flags
 CC = gcc
-# -Ofast turns on aggressive architecture optimizations just like modern high-performance ports
-CFLAGS = -Wall -Wextra -Ofast -march=native
-LIBS = $(shell pkg-config --cflags --libs sdl2)
+CFLAGS = -Wall -Wextra -O3
+# Fetch SDL2 flags and include math library (-lm)
+LIBS = $(shell pkg-config --cflags --libs sdl2) -lm
 
+# Target executable name
 TARGET = game
+
+# Source files
 SRC = main.c
 
 all: $(TARGET)
