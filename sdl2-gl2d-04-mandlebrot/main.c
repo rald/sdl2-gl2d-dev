@@ -1,10 +1,10 @@
 #include "gl2d.h"
 #include <stdint.h>
 
-#define WIDTH 512
-#define HEIGHT 512
-#define SCALE 1
-#define MAX_ITER 512
+#define WIDTH 128
+#define HEIGHT 128
+#define SCALE 4
+#define MAX_ITER 64
 
 // 16.16 Fixed-point representation (16 bits integer, 16 bits fractional)
 typedef int32_t fix;
