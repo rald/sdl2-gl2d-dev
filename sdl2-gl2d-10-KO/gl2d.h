@@ -3,12 +3,6 @@
 
 #include <SDL2/SDL.h>
 #include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct {
     SDL_Window* window;
@@ -17,34 +11,13 @@ typedef struct {
     uint32_t* pixels;
     int width;
     int height;
-    int pitch;
+    int pitch; // Bytes per row
 } GL2D_Context;
 
-GL2D_Context* gl2d_init(const char* title, int w, int h, int scale);
-void gl2d_quit(GL2D_Context* ctx);
-uint32_t gl2d_rgb(uint8_t r, uint8_t g, uint8_t b);
-uint32_t gl2d_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-void gl2d_pset(GL2D_Context* ctx, int x, int y, uint32_t color);
-uint32_t gl2d_pget(GL2D_Context* ctx, int x, int y);
-void gl2d_cls(GL2D_Context* ctx, uint32_t color);
-void gl2d_flip(GL2D_Context* ctx);
-bool gl2d_inrect(int x, int y, int rx, int ry, int rw, int rh);
-bool gl2d_incirc(int x, int y, int cx, int cy, int r);
-void gl2d_dline(GL2D_Context *ctx, int x0, int y0, int x1, int y1, uint32_t c);
-void gl2d_drect(GL2D_Context *ctx, int x, int y, int w, int h, uint32_t c);
-void gl2d_frect(GL2D_Context *ctx, int x, int y, int w, int h, uint32_t c);
-void gl2d_dcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c);
-void gl2d_fcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef GL2D_IMPLEMENTATION
-
+// Global or module-local context pointer if working standalone
 static GL2D_Context* _gl2d_current_ctx = NULL;
 
-GL2D_Context* gl2d_init(const char* title, int w, int h, int scale) {
+inline static GL2D_Context* gl2d_init(const char* title, int w, int h, int scale) {
     GL2D_Context* ctx = (GL2D_Context*)SDL_malloc(sizeof(GL2D_Context));
     if (!ctx) return NULL;
 
@@ -72,6 +45,7 @@ GL2D_Context* gl2d_init(const char* title, int w, int h, int scale) {
         return NULL;
     }
 
+    // Create a streaming texture matching the low-res virtual screen buffer
     ctx->texture = SDL_CreateTexture(ctx->renderer, SDL_PIXELFORMAT_ARGB8888, 
                                      SDL_TEXTUREACCESS_STREAMING, w, h);
     if (!ctx->texture) {
@@ -89,7 +63,7 @@ GL2D_Context* gl2d_init(const char* title, int w, int h, int scale) {
     return ctx;
 }
 
-void gl2d_quit(GL2D_Context* ctx) {
+inline static void gl2d_quit(GL2D_Context* ctx) {
     if (!ctx) return;
     if (ctx->pixels) SDL_free(ctx->pixels);
     if (ctx->texture) SDL_DestroyTexture(ctx->texture);
@@ -99,51 +73,60 @@ void gl2d_quit(GL2D_Context* ctx) {
     SDL_free(ctx);
 }
 
-uint32_t gl2d_rgb(uint8_t r, uint8_t g, uint8_t b) {
+// Map R, G, B, A components to native 32-bit pixel format (ARGB8888)
+inline static uint32_t gl2d_rgb(uint8_t r, uint8_t g, uint8_t b) {
     return (0xFF << 24) | (r << 16) | (g << 8) | b;
 }
 
-uint32_t gl2d_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+inline static uint32_t gl2d_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     return (a << 24) | (r << 16) | (g << 8) | b;
 }
 
-void gl2d_pset(GL2D_Context* ctx, int x, int y, uint32_t color) {
+// Fast Set Pixel (PSET) with optional boundary checks
+inline static void gl2d_pset(GL2D_Context* ctx, int x, int y, uint32_t color) {
     if (x >= 0 && x < ctx->width && y >= 0 && y < ctx->height) {
         ctx->pixels[y * ctx->width + x] = color;
     }
 }
 
-uint32_t gl2d_pget(GL2D_Context* ctx, int x, int y) {
+// Fast Get Pixel (PGET)
+inline static uint32_t gl2d_pget(GL2D_Context* ctx, int x, int y) {
     if (x >= 0 && x < ctx->width && y >= 0 && y < ctx->height) {
         return ctx->pixels[y * ctx->width + x];
     }
     return 0;
 }
 
-void gl2d_cls(GL2D_Context* ctx, uint32_t color) {
+// Clear screen buffer with color
+inline static void gl2d_cls(GL2D_Context* ctx, uint32_t color) {
     int total = ctx->width * ctx->height;
     for (int i = 0; i < total; i++) {
         ctx->pixels[i] = color;
     }
 }
 
-void gl2d_flip(GL2D_Context* ctx) {
+// Push CPU pixel buffer to GPU texture and present to screen
+inline static void gl2d_flip(GL2D_Context* ctx) {
     SDL_UpdateTexture(ctx->texture, NULL, ctx->pixels, ctx->pitch);
     SDL_RenderClear(ctx->renderer);
     SDL_RenderCopy(ctx->renderer, ctx->texture, NULL, NULL);
     SDL_RenderPresent(ctx->renderer);
 }
 
+
+// Check if point is inside a rectangle
 bool gl2d_inrect(int x, int y, int rx, int ry, int rw, int rh) {
     return (x >= rx && x < rx + rw && y >= ry && y < ry + rh);
 }
 
+// Check if point is inside a circle
 bool gl2d_incirc(int x, int y, int cx, int cy, int r) {
     int dx = x - cx;
     int dy = y - cy;
     return (dx * dx + dy * dy <= r * r);
 }
 
+// Draw Line (Bresenham's Line Algorithm)
 void gl2d_dline(GL2D_Context *ctx, int x0, int y0, int x1, int y1, uint32_t c) {
     int dx = abs(x1 - x0);
     int dy = abs(y1 - y0);
@@ -166,15 +149,17 @@ void gl2d_dline(GL2D_Context *ctx, int x0, int y0, int x1, int y1, uint32_t c) {
     }
 }
 
+// Draw Rectangle (Outline)
 void gl2d_drect(GL2D_Context *ctx, int x, int y, int w, int h, uint32_t c) {
     int x1 = x + w - 1;
     int y1 = y + h - 1;
-    gl2d_dline(ctx, x, y, x1, y, c);
-    gl2d_dline(ctx, x1, y, x1, y1, c);
-    gl2d_dline(ctx, x1, y1, x, y1, c);
-    gl2d_dline(ctx, x, y1, x, y, c);
+    dline(ctx, x, y, x1, y, c);
+    dline(ctx, x1, y, x1, y1, c);
+    dline(ctx, x1, y1, x, y1, c);
+    dline(ctx, x, y1, x, y, c);
 }
 
+// Fill Rectangle
 void gl2d_frect(GL2D_Context *ctx, int x, int y, int w, int h, uint32_t c) {
     for (int dy = 0; dy < h; dy++) {
         for (int dx = 0; dx < w; dx++) {
@@ -183,6 +168,7 @@ void gl2d_frect(GL2D_Context *ctx, int x, int y, int w, int h, uint32_t c) {
     }
 }
 
+// Draw Circle (Outline - Midpoint Circle Algorithm)
 void gl2d_dcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c) {
     int x = 0;
     int y = r;
@@ -208,12 +194,14 @@ void gl2d_dcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c) {
     }
 }
 
+// Fill Circle (Compatible with dcirc using symmetric horizontal spans)
 void gl2d_fcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c) {
     int x = 0;
     int y = r;
     int d = 3 - 2 * r;
 
     while (y >= x) {
+        // Draw horizontal lines between symmetric points to fill the circle efficiently
         for (int px = xc - x; px <= xc + x; px++) {
             gl2d_pset(ctx, px, yc + y, c);
             gl2d_pset(ctx, px, yc - y, c);
@@ -232,7 +220,5 @@ void gl2d_fcirc(GL2D_Context *ctx, int xc, int yc, int r, uint32_t c) {
         }
     }
 }
-
-#endif // GL2D_IMPLEMENTATION
 
 #endif // GL2D_H

@@ -4,7 +4,6 @@
 #include <time.h>
 #include <math.h>
 
-#define GL2D_IMPLEMENTATION
 #include "gl2d.h"
 
 #define WIDTH 128
@@ -82,8 +81,8 @@ void update(float dt, GL2D_Context* ctx) {
         ball.vy = -ball.vy;
     }
 
-    gl2d_fcirc(ctx, (int)ball.x, (int)ball.y, ball.radius, SWEETIE_16_PALETTE[0x01]);
-    gl2d_dcirc(ctx, (int)ball.x, (int)ball.y, ball.radius, SWEETIE_16_PALETTE[0x0C]);
+    fcirc(ctx, (int)ball.x, (int)ball.y, ball.radius, SWEETIE_16_PALETTE[0x01]);
+    dcirc(ctx, (int)ball.x, (int)ball.y, ball.radius, SWEETIE_16_PALETTE[0x0C]);
 }
 
 int main(int argc, char* argv[]) {
@@ -108,7 +107,7 @@ int main(int argc, char* argv[]) {
         float dt = (float)((double)(current_time - last_time) / freq);
         last_time = current_time;
 
-        while (SDL_PollEvent(&event)) {
+while (SDL_PollEvent(&event)) {
             switch(event.type) {
                 case SDL_QUIT:
                     running = false;
