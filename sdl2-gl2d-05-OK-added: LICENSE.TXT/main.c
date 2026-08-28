@@ -4,7 +4,7 @@
 #define WIDTH 512
 #define HEIGHT 512
 #define SCALE 1
-#define MAX_ITER 256
+#define MAX_ITER 512
 
 // 16.16 Fixed-point representation (16 bits integer, 16 bits fractional)
 typedef int32_t fix;
@@ -25,7 +25,7 @@ uint32_t mandel_color(int i) {
 
 int main(int argc, char* argv[]) {
     // Initialize 128x128 virtual screen scaled up 4x
-    GL2D_Context* app = gl2d_init("Mandlebrot", WIDTH, HEIGHT, SCALE);
+    GL2D_Context* app = gl2d_init("gl2d - Fractint DOS Style (128x128x4)", WIDTH, HEIGHT, SCALE);
     if (!app) return -1;
 
     int running = 1;
